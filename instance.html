@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE HTML>
+<html>
+<head>
+ <script type="text/javascript" src="/site_media/jquery/js/jquery-1.6.1.min.js"></script>
+
+ <style type="text/css">
+  #formwrap {
+   line-height: 2em;
+   background: #eef;
+   margin: 10px;
+   padding: 10px;
+   height: 500px;
+  }
+  body {
+   font-family: "Lucida Grande", "Lucida Sans Unicode", Verdana, Arial, Helvetica, sans-serif;
+   font-size: 14px;
+  }
+  .center { margin-left:auto; margin-right:auto; }
+  .help {cursor:help; border-bottom: 1px dotted #A9A9A9}
+ </style>
+
+ <script>
+  $(function() {
+
+    $.fn.serializeObject = function() {
+     var o = {};
+     var a = this.serializeArray();
+     $.each( a, function() {
+       if( o[this.name] != null ) {
+         if( !o[this.name].push ) {
+           o[this.name] = [o[this.name]];
+         }
+         o[this.name].push(this.value || '');
+       } else {
+         o[this.name] = this.value || '';
+       }
+      });
+      return o;
+    };
+
+    var reportUrl = '/rundb/api/v1/results/'+TB_result+'/?format=json&noplugin=True';
+    var pluginUrl = '/rundb/api/v1/plugin/'+TB_plugin.pk+'/?format=json';
+    var analysisUrl;
+    $.ajaxSetup({async: false});
+    $.get( reportUrl, function(data) {
+      analysisUrl = data.reportLink;
+    });
+    // get config.html defaults from API - not sure this is still valid with new plan?
+    $.get( reportUrl, function(data) {
+      $.each( data.config, function(key,val) {
+        try { $("#"+key).val(val); }
+        catch(e) {}
+      });
+    });
+
+    // get plan libtype
+    var reportUrl = '/rundb/api/v1/results/'+TB_result+'/?format=json&noplugin=True';
+    var easUrl;
+    var analysisUrl;
+    $.ajaxSetup({async: false});
+    $.get( reportUrl, function(data) {
+     analysisUrl = data.reportLink;
+     easUrl = data.eas;
+     experimentUrl = data.experiment;
+     referenceID = data.reference;
+    });
+    var planLibType = "";
+    if( experimentUrl != undefined && experimentUrl != null && experimentUrl != "" ) {
+      var planUrl;
+      $.get( experimentUrl+"?format=json", function(data) { planUrl = data.plan; } );
+      if( planUrl != undefined && planUrl != null && planUrl != "" ) {
+        $.get( planUrl+"?format=json", function(data) { planLibType = data.runType; });
+      }
+    }
+
+	$('#show_advanced').click(function() {
+      var state = $(this).text();
+      if( state == "Show advanced options" ) {
+        state = "Hide advanced options";
+        $('.advanced').show();
+        // set show/hide based on application selected
+        setOptionDefaults(true);
+      } else {
+        state = "Show advanced options";
+        $('.advanced').hide();
+      }
+      $(this).text(state);
+      return false; // cancels redirection
+    });
+	
+	function setOptionDefaults(forceUpdate) {
+	  forceUpdate = forceUpdate || false;
+	  var showchecks = 'YYYYYY';
+      // do not update for hidden advanced option - unless forced
+      if( !forceUpdate && $('#show_advanced').text() == "Show advanced options" ) return;
+	  $("#skip_barcodes").toggle(showchecks[0]=='Y');
+	  $("#kmer_cov").toggle(showchecks[1]=='Y');
+      $("#ram_allocate").toggle(showchecks[2]=='Y');
+      $("#cpu_allocate").toggle(showchecks[3]=='Y');
+    }
+	
+	$(function()
+    {
+    $('#postbutton').click(function() {
+      obj = $('#pluginconfig').serializeObject();
+	  obj.barcodetable = parent.TB_plugin_functions.get_plugin_barcodetable();
+      pluginAPIJSON = { "plugin" : [TB_plugin.fields.name], "pluginconfig" : obj };
+      pluginAPIJSON = JSON.stringify(pluginAPIJSON);
+      pluginURL = "/rundb/api/v1/results/" + TB_result + "/plugin/";
+      $.ajax({
+        type: 'POST',
+        url: pluginURL,
+        async: false,
+        contentType: "application/json; charset=utf-8",
+        success: function(data) {
+          $("#json_result").html('<div style="text-align: center;"><img src="/site_media/jquery/colorbox/images/loading.gif" alt="Running Plugin" style="float:center"></img><p>Running the Plugin... Check the Plugin Summary</p></div>');
+          setTimeout("parent.$.fn.colorbox.close()",2000);
+        },
+        data: pluginAPIJSON,
+        dataType: "json"
+      });
+    });
+    });
+ 
+   });
+ </script>
+</head>
+
+<!--build the html page for what the user sees-->
+<body>
+ <form id="pluginconfig" name="pluginconfig">
+   <div align="center" id="json_result">
+    <input id="postbutton" type="submit" value="Submit">
+   </div>
+  
+	<div style="text-align:center">
+    <h2>Torrent AssemblerTrinity Plugin</h2>
+    </div>
+	
+	
+	<table class="center" cellpadding="5px">
+	  
+      <tr>
+        <td><span class="help" title="Genome-guided Trinity De novo Transcriptome Assembly">Genome-Guided:</span></td>
+         <td align=left>
+         <select name="genome_guided" id="genome_guided">
+            <option value="Yes" selected="selected">Yes</option>
+		    <option value="No">No</option>
+         </select>
+        </td>
+      </tr>
+	  
+	  <tr>
+        <td><span class="help" title="Select chip used in this experiment">Chip Type:</span></td>
+         <td align=left>
+         <select name="chip" id="chip">
+		    <option value="510">510</option>
+			<option value="520">520</option>
+			<option value="530" selected="selected">530</option>
+			<option value="540">540</option>
+			<option value="550">550</option>
+		    <option value="Proton P1">Proton P1</option>
+			<option value="PGM">PGM</option>
+         </select>
+        </td>
+      </tr>
+	  
+    </table>
+	
+    <table align="center">
+	  <tr>
+      <td colspan=2 style="text-align:center"><a id="show_advanced" href="">Show advanced options</a></td>
+      </tr>
+	  
+	  <tr id="skip_barcodes" class="advanced" style="display:none">
+	  <td align=right>Skip barcodes with fewer than</td>
+	  <td lign=left><input name="min_reads" id="min_reads" value="1000">reads</td>
+      </tr>
+	
+	  <tr id="kmer_cov" class="advanced" style="display:none">
+	  <td align=right>Min count of K-mers to be assembled:</td>
+	  <td lign=left><input name="min_kmer_cov" id="min_kmer_cov" value="2"></td>
+      </tr>
+	  
+	  <tr id="ram_allocate" class="advanced" style="display:none">
+      <td align=right>RAM to allocate:</td>
+      <td align=left>
+		<select name="RAM" id="RAM">
+			<option value="8G">8Gb</option>
+            <option value="16G">16Gb</option>
+            <option value="24G">24Gb</option>
+            <option value="32G" selected="selected">32Gb</option>
+            <option value="40G">40Gb (max)</option>
+        </select>
+
+      </td>
+	  </tr>
+	  
+	  <tr id="cpu_allocate" class="advanced" style="display:none">
+	  <td align=right>CPU to allocate:</td>
+      <td align=left>
+		<select name="CPU" id="CPU">
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8" selected="selected">8</option>
+            <option value="10">10</option>
+            <option value="12">12</option>
+			<option value="16">16 (max)</option>
+		</select>
+      </td>
+	  </tr>
+	
+    </table>
+	
+	<div>
+     <h4>About Torrent AssemblerTrinity plugin</h4>
+     <p>This plugin uses Trinity for Ion Ampliseq Coronavirus Research Panel Sequencing Data Assembly.</p>
+     <p>Get more information please visit <a href="https://github.com/trinityrnaseq/trinityrnaseq/wiki" target="_blank">Trinity</a>.</p>		
+    </div>
+
+ </form>
+</body>
+</html>
