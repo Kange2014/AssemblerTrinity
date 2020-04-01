@@ -1,5 +1,5 @@
 # AssemblerTrinity
-This is one Torrent Suite Software plugin for ion torrent sequencing data assembly. It provides one graphic interface to users for easy-use.
+This is one Torrent Suite Software plugin for sequencing data assembly from ion torrent platforms, like genestudio S5 serires. It provides one intuitive and graphic interface to users for easy-use.
 
 The basic workflow for this plugin is:
 1. use trinity to de novo assemble reads from ion torrent sequencing platform directly with/without genome-guided mode;
